@@ -15,12 +15,10 @@ namespace Tresor001
             PartitionKey = partition;
             RowKey = row;
         }
+        public int review_rating { get; set; }
+        public string review_name { get; set; }
+        public string review_text { get; set; }
+        public string review_category { get; set; }
 
-        public string text { get; set; }
-
-        public override string ToString()
-        {
-            return text;
-        }
     }
 }
