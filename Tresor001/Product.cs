@@ -18,6 +18,5 @@ namespace Tresor001
 
         public string product_description { get; set; }
         public double product_rating { get; set; }
-        public string product_name { get; set; }
     }
 }

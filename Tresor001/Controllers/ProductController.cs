@@ -28,7 +28,7 @@ namespace Tresor001.Controllers
             List<Product> selected_products = new List<Product>();
             foreach (var item in products)
             {
-                if (item.product_name == id)
+                if (item.RowKey == id)
                 {
                     selected_products.Add(item);
                 }

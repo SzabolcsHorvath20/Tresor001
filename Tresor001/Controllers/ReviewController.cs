@@ -21,70 +21,101 @@ namespace Tresor001.Controllers
         private CloudStorageAccount storageAccount = CloudStorageAccount.Parse(storageConnectionString);
 
         [HttpGet]
-        public IActionResult Get()
+        public IActionResult Get(string id, string category, int rows)
         {
             CloudStorageAccount storageAccount;
             storageAccount = CloudStorageAccount.Parse(storageConnectionString);
 
             CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable table = tableClient.GetTableReference(tableNameReview);
-            var reviews = table.ExecuteQuery(new TableQuery<Review>()).ToList();
-            var sortedreviews = reviews.OrderBy(x => x.Timestamp);
-            JObject json = new JObject();
-            json["reviews"] = JToken.FromObject(sortedreviews);
-
-            InsertLog();
-
-            return Ok(json);
+            var reviews = table.ExecuteQuery(new TableQuery<Review>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, id))).ToList();
+            var sortedreviews = reviews.OrderBy(x => x.Timestamp).Reverse();
+            if (GetProduct(category, id).Result == null)
+            {
+                return BadRequest("No product by that name.");
+            }
+            else
+            {
+                JObject json = new JObject();
+                json["reviews"] = JToken.FromObject(sortedreviews.Take(rows));
+                InsertLog(id);
+                return Ok(json);
+            }
         }
+
+        
 
         [HttpPost]
         public IActionResult Post(JObject jreview)
         {
             Review review = jreview.ToObject<Review>();
-            if (review.review_text.Length > 500)
-            {
-                return BadRequest("Cannot save review. Review size is more then 500 characters.");
+            review.RowKey = Convert.ToString(GetLatest(review.PartitionKey));
+            Product retrievedProduct = GetProduct(review.review_category, review.PartitionKey).Result;
+            if (CheckLog(review.PartitionKey).Result == null)
+            {               
+                return BadRequest("Can't post review. Didn't read the previous ones.");
             }
             else
             {
-
-                if (CheckLog().Result == null)
+                if (review.review_text.Length > 500)
                 {
-                    return BadRequest("Can't post review. Didn't read the previous ones.");
+                    return BadRequest("Cannot save review. Review size is more then 500 characters.");
                 }
                 else
                 {
                     InsertReview(review);
-                    UpdateRating(review.review_category, review.PartitionKey);
-                    DeleteLog(CheckLog().Result);
+                    UpdateRating(retrievedProduct, review.PartitionKey);
+                    DeleteLog(CheckLog(review.PartitionKey).Result);
                     return Ok("Review posted.");
                 }
-
             }
         }
 
         public async void InsertReview(Review review)
         {
-
             CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable table = tableClient.GetTableReference(tableNameReview);
             TableOperation insertReview = TableOperation.InsertOrMerge(review);
             TableResult result = await table.ExecuteAsync(insertReview);
         }
 
-        public async void UpdateRating(string category, string review_id)
+        public int GetLatest(string id)
         {
+            CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
+            CloudTable table = tableClient.GetTableReference(tableNameReview);
+            var reviews = table.ExecuteQuery(new TableQuery<Review>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, id))).ToList();
+            List<int> rowKeys = new List<int>();
+            foreach (var item in reviews)
+            {
+                rowKeys.Add(Convert.ToInt32(item.RowKey));
+            }
+            if (rowKeys.Count == 0)
+            {
+                return 1;
+            }
+            else
+            {
+                return rowKeys.OrderByDescending(x => x).First() + 1;
+            }
 
+        }
+
+        public async Task<Product> GetProduct(string category, string review_id)
+        {
             CloudTableClient tableClientProduct = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable tableProduct = tableClientProduct.GetTableReference(tableNameProduct);
             TableOperation retrieveOperation = TableOperation.Retrieve<Product>(category, review_id);
             TableResult result = await tableProduct.ExecuteAsync(retrieveOperation);
-            var retrievedProduct = result.Result as Product;
+            return result.Result as Product;
+        }
+        public void UpdateRating(Product retrievedProduct, string reviewId)
+        {
+            CloudTableClient tableClientProduct = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
+            CloudTable tableProduct = tableClientProduct.GetTableReference(tableNameProduct);
 
             CloudTableClient tableClientReview = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable tableReview = tableClientReview.GetTableReference(tableNameReview);
-            var query = new TableQuery<Review>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, review_id));
+            var query = new TableQuery<Review>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, reviewId));
             var resultReview = tableReview.ExecuteQuery<Review>(query).ToList();
             double sumRating = 0;
             foreach (var item in resultReview)
@@ -99,20 +130,20 @@ namespace Tresor001.Controllers
 
         }
 
-        public async void InsertLog()
+        public async void InsertLog(string product_id)
         {
             CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable tableLog = tableClient.GetTableReference(tableNameLog);
-            Log log = new Log("Get", HttpContext.Connection.Id);
+            Log log = new Log(product_id, HttpContext.Connection.Id);
             TableOperation insertLog = TableOperation.InsertOrMerge(log);
             TableResult result = await tableLog.ExecuteAsync(insertLog);
         }
 
-        public async Task<Log> CheckLog()
+        public async Task<Log> CheckLog(string product_id)
         {
             CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable tableLog = tableClient.GetTableReference(tableNameLog);
-            TableOperation retrieveOperation = TableOperation.Retrieve<Log>("Get", HttpContext.Connection.Id.ToString());
+            TableOperation retrieveOperation = TableOperation.Retrieve<Log>(product_id, HttpContext.Connection.Id.ToString());
             TableResult result = await tableLog.ExecuteAsync(retrieveOperation);         
             var retrievedLog = result.Result as Log;
             return retrievedLog;
