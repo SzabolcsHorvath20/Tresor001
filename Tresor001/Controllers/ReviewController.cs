@@ -63,10 +63,17 @@ namespace Tresor001.Controllers
                 }
                 else
                 {
-                    InsertReview(review);
-                    UpdateRating(retrievedProduct, review.PartitionKey);
-                    DeleteLog(CheckLog(review.PartitionKey).Result);
-                    return Ok("Review posted.");
+                    if (review.review_rating < 1 || review.review_rating > 5)
+                    {
+                        return BadRequest("Product rating must be between 1 and 5.");
+                    }
+                    else
+                    {
+                        InsertReview(review);
+                        UpdateRating(retrievedProduct, review.PartitionKey);
+                        DeleteLog(CheckLog(review.PartitionKey).Result);
+                        return Ok("Review posted.");
+                    }
                 }
             }
         }
