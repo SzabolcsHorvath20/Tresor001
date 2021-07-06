@@ -20,7 +20,7 @@ namespace Tresor001.Controllers
         private static string tableNameLog = "Log";
         private CloudStorageAccount storageAccount = CloudStorageAccount.Parse(storageConnectionString);
 
-        [HttpGet]
+       [HttpGet]
         public IActionResult Get(string id, string category, string rows)
         {
             try
@@ -42,6 +42,7 @@ namespace Tresor001.Controllers
                     if (rows == "All")
                     {
                         json["reviews"] = JToken.FromObject(sortedreviews);
+                        InsertLog(id);
                         return Ok(json);
                     }
                     else
@@ -68,28 +69,35 @@ namespace Tresor001.Controllers
                 Review review = jreview.ToObject<Review>();
                 review.RowKey = Convert.ToString(GetLatest(review.PartitionKey));
                 Product retrievedProduct = GetProduct(review.review_category, review.PartitionKey).Result;
-                if (CheckLog(review.PartitionKey).Result == null)
+                if (GetProduct(review.review_category, review.PartitionKey).Result == null)
                 {
-                    return BadRequest("Can't post review. Didn't read the previous ones.");
+                    return BadRequest("No product by that name.");
                 }
                 else
                 {
-                    if (review.review_text.Length > 500)
+                    if (CheckLog(review.PartitionKey).Result == null)
                     {
-                        return BadRequest("Cannot save review. Review size is more then 500 characters.");
+                        return BadRequest("Can't post review. Didn't read the previous ones.");
                     }
                     else
                     {
-                        if (review.review_rating < 1 || review.review_rating > 5)
+                        if (review.review_text.Length > 500)
                         {
-                            return BadRequest("Product rating must be between 1 and 5.");
+                            return BadRequest("Cannot save review. Review size is more then 500 characters.");
                         }
                         else
                         {
-                            InsertReview(review);
-                            UpdateRating(retrievedProduct, review.PartitionKey);
-                            DeleteLog(CheckLog(review.PartitionKey).Result);
-                            return Ok("Review posted.");
+                            if (review.review_rating < 1 || review.review_rating > 5)
+                            {
+                                return BadRequest("Product rating must be between 1 and 5.");
+                            }
+                            else
+                            {
+                                InsertReview(review);
+                                UpdateRating(retrievedProduct, review.PartitionKey);
+                                DeleteLog(CheckLog(review.PartitionKey).Result);
+                                return Ok("Review posted.");
+                            }
                         }
                     }
                 }
@@ -100,7 +108,7 @@ namespace Tresor001.Controllers
             }
         }
 
-        public async void InsertReview(Review review)
+        private async void InsertReview(Review review)
         {
             CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable table = tableClient.GetTableReference(tableNameReview);
@@ -108,7 +116,7 @@ namespace Tresor001.Controllers
             TableResult result = await table.ExecuteAsync(insertReview);
         }
 
-        public int GetLatest(string id)
+        private int GetLatest(string id)
         {
             CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable table = tableClient.GetTableReference(tableNameReview);
@@ -129,7 +137,7 @@ namespace Tresor001.Controllers
 
         }
 
-        public async Task<Product> GetProduct(string category, string review_id)
+        private async Task<Product> GetProduct(string category, string review_id)
         {
             CloudTableClient tableClientProduct = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable tableProduct = tableClientProduct.GetTableReference(tableNameProduct);
@@ -137,7 +145,7 @@ namespace Tresor001.Controllers
             TableResult result = await tableProduct.ExecuteAsync(retrieveOperation);
             return result.Result as Product;
         }
-        public void UpdateRating(Product retrievedProduct, string reviewId)
+        private void UpdateRating(Product retrievedProduct, string reviewId)
         {
             CloudTableClient tableClientProduct = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable tableProduct = tableClientProduct.GetTableReference(tableNameProduct);
@@ -159,7 +167,7 @@ namespace Tresor001.Controllers
 
         }
 
-        public async void InsertLog(string product_id)
+        private async void InsertLog(string product_id)
         {
             CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable tableLog = tableClient.GetTableReference(tableNameLog);
@@ -168,7 +176,7 @@ namespace Tresor001.Controllers
             TableResult result = await tableLog.ExecuteAsync(insertLog);
         }
 
-        public async Task<Log> CheckLog(string product_id)
+        private async Task<Log> CheckLog(string product_id)
         {
             CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable tableLog = tableClient.GetTableReference(tableNameLog);
@@ -178,7 +186,7 @@ namespace Tresor001.Controllers
             return retrievedLog;
         }
 
-        public async void DeleteLog(Log retrievedLog)
+        private async void DeleteLog(Log retrievedLog)
         {
             CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
             CloudTable tableLog = tableClient.GetTableReference(tableNameLog);

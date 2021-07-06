@@ -12,7 +12,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "index",
+      "launchUrl": "api/ProductList",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "AZURE_USERNAME": "garruswasab@gmail.com"
