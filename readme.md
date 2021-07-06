@@ -1,5 +1,3 @@
-Leírás
-
 Végpontok:
 
 http://localhost:24018/api/Product
@@ -18,9 +16,9 @@ http://localhost:24018/api/Review?id=Doll&rows=5&category=Toys
 A végpont GET request esetén visszaadja a kívánt termékhez tartozó véleményeket, ha biztosítjuk a megfelelő paramétereket.
 A rows változó megadja, hogy hány véleményt szeretnénk lekérni.
 A category változó az adatbázis optimálisabb működéséhez szükséges,
-ugyanis a vélemények a termékkategóriák és azon belül termék azonosítók szerint vannak csoportosítva.
+ugyanis a vélemények a termékkategória és azon belül termék azonosítók szerint vannak csoportosítva.
 Ez nagyobb mennyiségű termék esetén jóval le tudja rövidíteni a keresési időt.
-A limitált számú legfrissebb vélemények megtekintése rögzítésre kerül.
+A vélemények megtekintése rögzítésre kerül a Log táblázatban.
 Ha a sorok száma helyett, az All szó kerül elküldésre, akkor az összes vélemény megjelenik.
 
 
