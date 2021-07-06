@@ -21,25 +21,40 @@ namespace Tresor001.Controllers
         private CloudStorageAccount storageAccount = CloudStorageAccount.Parse(storageConnectionString);
 
         [HttpGet]
-        public IActionResult Get(string id, string category, int rows)
+        public IActionResult Get(string id, string category, string rows)
         {
-            CloudStorageAccount storageAccount;
-            storageAccount = CloudStorageAccount.Parse(storageConnectionString);
+            try
+            {
+                CloudStorageAccount storageAccount;
+                storageAccount = CloudStorageAccount.Parse(storageConnectionString);
 
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
-            CloudTable table = tableClient.GetTableReference(tableNameReview);
-            var reviews = table.ExecuteQuery(new TableQuery<Review>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, id))).ToList();
-            var sortedreviews = reviews.OrderBy(x => x.Timestamp).Reverse();
-            if (GetProduct(category, id).Result == null)
-            {
-                return BadRequest("No product by that name.");
+                CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
+                CloudTable table = tableClient.GetTableReference(tableNameReview);
+                var reviews = table.ExecuteQuery(new TableQuery<Review>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, id))).ToList();
+                var sortedreviews = reviews.OrderBy(x => x.Timestamp).Reverse();
+                if (GetProduct(category, id).Result == null)
+                {
+                    return BadRequest("No product by that name.");
+                }
+                else
+                {
+                    JObject json = new JObject();
+                    if (rows == "All")
+                    {
+                        json["reviews"] = JToken.FromObject(sortedreviews);
+                        return Ok(json);
+                    }
+                    else
+                    {
+                        json["reviews"] = JToken.FromObject(sortedreviews.Take(Convert.ToInt32(rows)));
+                        InsertLog(id);
+                        return Ok(json);
+                    }
+                }
             }
-            else
+            catch (StorageException e)
             {
-                JObject json = new JObject();
-                json["reviews"] = JToken.FromObject(sortedreviews.Take(rows));
-                InsertLog(id);
-                return Ok(json);
+                return BadRequest(e.Message);
             }
         }
 
@@ -48,33 +63,40 @@ namespace Tresor001.Controllers
         [HttpPost]
         public IActionResult Post(JObject jreview)
         {
-            Review review = jreview.ToObject<Review>();
-            review.RowKey = Convert.ToString(GetLatest(review.PartitionKey));
-            Product retrievedProduct = GetProduct(review.review_category, review.PartitionKey).Result;
-            if (CheckLog(review.PartitionKey).Result == null)
-            {               
-                return BadRequest("Can't post review. Didn't read the previous ones.");
-            }
-            else
+            try
             {
-                if (review.review_text.Length > 500)
+                Review review = jreview.ToObject<Review>();
+                review.RowKey = Convert.ToString(GetLatest(review.PartitionKey));
+                Product retrievedProduct = GetProduct(review.review_category, review.PartitionKey).Result;
+                if (CheckLog(review.PartitionKey).Result == null)
                 {
-                    return BadRequest("Cannot save review. Review size is more then 500 characters.");
+                    return BadRequest("Can't post review. Didn't read the previous ones.");
                 }
                 else
                 {
-                    if (review.review_rating < 1 || review.review_rating > 5)
+                    if (review.review_text.Length > 500)
                     {
-                        return BadRequest("Product rating must be between 1 and 5.");
+                        return BadRequest("Cannot save review. Review size is more then 500 characters.");
                     }
                     else
                     {
-                        InsertReview(review);
-                        UpdateRating(retrievedProduct, review.PartitionKey);
-                        DeleteLog(CheckLog(review.PartitionKey).Result);
-                        return Ok("Review posted.");
+                        if (review.review_rating < 1 || review.review_rating > 5)
+                        {
+                            return BadRequest("Product rating must be between 1 and 5.");
+                        }
+                        else
+                        {
+                            InsertReview(review);
+                            UpdateRating(retrievedProduct, review.PartitionKey);
+                            DeleteLog(CheckLog(review.PartitionKey).Result);
+                            return Ok("Review posted.");
+                        }
                     }
                 }
+            }
+            catch (StorageException e)
+            {
+                return BadRequest(e.Message);
             }
         }
 
