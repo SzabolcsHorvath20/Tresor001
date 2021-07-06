@@ -25,12 +25,7 @@ namespace Tresor001.Controllers
         {
             try
             {
-                CloudStorageAccount storageAccount;
-                storageAccount = CloudStorageAccount.Parse(storageConnectionString);
-
-                CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
-                CloudTable table = tableClient.GetTableReference(tableNameReview);
-                var reviews = table.ExecuteQuery(new TableQuery<Review>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, id))).ToList();
+                var reviews = Connect(tableNameReview).ExecuteQuery(new TableQuery<Review>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, id))).ToList();
                 var sortedreviews = reviews.OrderBy(x => x.Timestamp).Reverse();
                 if (GetProduct(category, id).Result == null)
                 {
@@ -57,6 +52,12 @@ namespace Tresor001.Controllers
             {
                 return BadRequest(e.Message);
             }
+        }
+
+        private CloudTable Connect(string tableName)
+        {
+            CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
+            return tableClient.GetTableReference(tableName);
         }
 
         [HttpPost]
@@ -108,17 +109,13 @@ namespace Tresor001.Controllers
 
         private async void InsertReview(Review review)
         {
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
-            CloudTable table = tableClient.GetTableReference(tableNameReview);
             TableOperation insertReview = TableOperation.InsertOrMerge(review);
-            TableResult result = await table.ExecuteAsync(insertReview);
+            TableResult result = await Connect(tableNameReview).ExecuteAsync(insertReview);
         }
 
         private int GetLatest(string id)
         {
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
-            CloudTable table = tableClient.GetTableReference(tableNameReview);
-            var reviews = table.ExecuteQuery(new TableQuery<Review>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, id))).ToList();
+            var reviews = Connect(tableNameReview).ExecuteQuery(new TableQuery<Review>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, id))).ToList();
             List<int> rowKeys = new List<int>();
             foreach (var item in reviews)
             {
@@ -137,22 +134,15 @@ namespace Tresor001.Controllers
 
         private async Task<Product> GetProduct(string category, string review_id)
         {
-            CloudTableClient tableClientProduct = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
-            CloudTable tableProduct = tableClientProduct.GetTableReference(tableNameProduct);
             TableOperation retrieveOperation = TableOperation.Retrieve<Product>(category, review_id);
-            TableResult result = await tableProduct.ExecuteAsync(retrieveOperation);
+            TableResult result = await Connect(tableNameProduct).ExecuteAsync(retrieveOperation);
             return result.Result as Product;
         }
 
         private void UpdateRating(Product retrievedProduct, string reviewId)
         {
-            CloudTableClient tableClientProduct = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
-            CloudTable tableProduct = tableClientProduct.GetTableReference(tableNameProduct);
-
-            CloudTableClient tableClientReview = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
-            CloudTable tableReview = tableClientReview.GetTableReference(tableNameReview);
             var query = new TableQuery<Review>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, reviewId));
-            var resultReview = tableReview.ExecuteQuery<Review>(query).ToList();
+            var resultReview = Connect(tableNameReview).ExecuteQuery<Review>(query).ToList();
             double sumRating = 0;
             foreach (var item in resultReview)
             {
@@ -162,35 +152,29 @@ namespace Tresor001.Controllers
             retrievedProduct.product_rating = totalRating;
 
             TableOperation updateOperation = TableOperation.Merge(retrievedProduct);
-            tableProduct.Execute(updateOperation);
+            Connect(tableNameProduct).Execute(updateOperation);
 
         }
 
         private async void InsertLog(string product_id)
         {
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
-            CloudTable tableLog = tableClient.GetTableReference(tableNameLog);
             Log log = new Log(product_id, HttpContext.Connection.Id);
             TableOperation insertLog = TableOperation.InsertOrMerge(log);
-            TableResult result = await tableLog.ExecuteAsync(insertLog);
+            TableResult result = await Connect(tableNameLog).ExecuteAsync(insertLog);
         }
 
         private async Task<Log> CheckLog(string product_id)
         {
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
-            CloudTable tableLog = tableClient.GetTableReference(tableNameLog);
             TableOperation retrieveOperation = TableOperation.Retrieve<Log>(product_id, HttpContext.Connection.Id.ToString());
-            TableResult result = await tableLog.ExecuteAsync(retrieveOperation);         
+            TableResult result = await Connect(tableNameLog).ExecuteAsync(retrieveOperation);         
             var retrievedLog = result.Result as Log;
             return retrievedLog;
         }
 
         private async void DeleteLog(Log retrievedLog)
         {
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
-            CloudTable tableLog = tableClient.GetTableReference(tableNameLog);
             TableOperation deleteLog = TableOperation.Delete(retrievedLog);
-            TableResult resultDel = await tableLog.ExecuteAsync(deleteLog);
+            TableResult resultDel = await Connect(tableNameLog).ExecuteAsync(deleteLog);
         }
     }
 }

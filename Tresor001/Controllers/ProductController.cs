@@ -25,16 +25,16 @@ namespace Tresor001.Controllers
                 storageAccount = CloudStorageAccount.Parse(storageConnectionString);
                 CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
                 CloudTable table = tableClient.GetTableReference(tableName);
-                var products = table.ExecuteQuery(new TableQuery<Product>()).ToList();
                 List<Product> selected_products = new List<Product>();
-                foreach (var item in products)
+                if (id == null)
                 {
-                    if (item.RowKey == id)
-                    {
-                        selected_products.Add(item);
-                    }
+                    selected_products = table.ExecuteQuery(new TableQuery<Product>()).ToList();
                 }
-                var sorted_products = selected_products.OrderBy(x => x.Timestamp);
+                else
+                {
+                    selected_products = table.ExecuteQuery(new TableQuery<Product>().Where(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, id))).ToList();
+                }
+                var sorted_products = selected_products.OrderByDescending(x => x.Timestamp);
                 JObject json = new JObject();
                 json["products"] = JToken.FromObject(sorted_products);
                 return Ok(json);

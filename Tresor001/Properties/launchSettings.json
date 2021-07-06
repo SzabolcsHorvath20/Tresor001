@@ -12,7 +12,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "api/ProductList",
+      "launchUrl": "api/Product",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "AZURE_USERNAME": "garruswasab@gmail.com"
@@ -21,7 +21,7 @@
     "Tresor001": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "weatherforecast",
+      "launchUrl": "api/Product",
       "applicationUrl": "http://localhost:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
