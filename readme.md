@@ -34,28 +34,28 @@ Adatbázis:
 
 Product Table			Itt tárolódnak a termékek.
 
-String PartitionKey		A termék kategóriája
-String RowKey			A termék azonosítója(név)
-DateTime Timestamp		A termék felvételének ideje
-String product_description	A termék leírása
-Double product_rating		A termék összesített értékelése
+String PartitionKey		A termék kategóriája.
+String RowKey			A termék azonosítója(név).
+DateTime Timestamp		A termék felvételének ideje.
+String product_description	A termék leírása.
+Double product_rating		A termék összesített értékelése.
 
 Review Table			Itt tárolódnak a vélemények.
 
-String PartitionKey		A termék neve, amiről az értékelés szól
+String PartitionKey		A termék neve, amiről az értékelés szól.
 String RowKey			A vélemény azonosítója(szám), ezt a program adja meg.
-DateTime Timestamp		A vélemény felvételének ideje
-String review_category		A termék kategóriája, ez felgyorsítja a keresést nagy adatbázis esetén a partíciós rendszer miatt
-String review_name		A véleményt hagyó személy neve, több szerepet kapna felhasználó menedzsmenttel
-Double review_rating		A vélemény pontszáma
-String review_text		A vélemény szövegezése(kevesebb, mint 500 karakter)
+DateTime Timestamp		A vélemény felvételének ideje.
+String review_category		A termék kategóriája, ez felgyorsítja a keresést nagy adatbázis esetén a partíciós rendszer miatt.
+String review_name		A véleményt hagyó személy neve, több szerepet kapna felhasználó menedzsmenttel.
+Double review_rating		A vélemény pontszáma.
+String review_text		A vélemény szövegezése(kevesebb, mint 500 karakter).
 
 Log Table			Minden termékre irányuló GET request után az adott felhasználó cselekedete rögzítése kerül,
 				hogy le lehessen ellenőrizni, hogy megtekintette-e a legutóbbi véleményeket.
 				Az adat a POST vélemény rögzítő request után törlődik, így nem telik meg az adatbázis.
 
-String PartitionKey		Termék azonosító
-String RowKey			Kapcsolat egyedi azonosítója
+String PartitionKey		Termék azonosító.
+String RowKey			Kapcsolat egyedi azonosítója.
 DateTime Timestamp		A log felvételének ideje.
 
 Mi kellene még ahhoz, hogy kész legyen az éles környezetben való használatra?
