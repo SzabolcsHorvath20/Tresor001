@@ -53,13 +53,11 @@ namespace Tresor001.Controllers
                     }
                 }
             }
-            catch (StorageException e)
+            catch (Exception e)
             {
                 return BadRequest(e.Message);
             }
         }
-
-        
 
         [HttpPost]
         public IActionResult Post(JObject jreview)
@@ -145,6 +143,7 @@ namespace Tresor001.Controllers
             TableResult result = await tableProduct.ExecuteAsync(retrieveOperation);
             return result.Result as Product;
         }
+
         private void UpdateRating(Product retrievedProduct, string reviewId)
         {
             CloudTableClient tableClientProduct = storageAccount.CreateCloudTableClient(new TableClientConfiguration());

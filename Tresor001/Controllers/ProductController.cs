@@ -19,11 +19,10 @@ namespace Tresor001.Controllers
         [HttpGet]
         public IActionResult Get(string id)
         {
-            CloudStorageAccount storageAccount;
-            storageAccount = CloudStorageAccount.Parse(storageConnectionString);
-
             try
             {
+                CloudStorageAccount storageAccount;
+                storageAccount = CloudStorageAccount.Parse(storageConnectionString);
                 CloudTableClient tableClient = storageAccount.CreateCloudTableClient(new TableClientConfiguration());
                 CloudTable table = tableClient.GetTableReference(tableName);
                 var products = table.ExecuteQuery(new TableQuery<Product>()).ToList();
@@ -40,13 +39,10 @@ namespace Tresor001.Controllers
                 json["products"] = JToken.FromObject(sorted_products);
                 return Ok(json);
             }
-            catch (StorageException e)
+            catch (Exception e)
             {
                 return BadRequest(e.Message);
-            }
-           
-            
-            
+            }        
         }
 
     }
