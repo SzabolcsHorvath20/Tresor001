@@ -12,6 +12,7 @@ http://localhost:24018/api/Product?id=Doll
 GET request, a végpont visszaadja a kívánt termék adatait.
 
 http://localhost:24018/api/Review?id=Doll&rows=All&category=Toys 
+
 http://localhost:24018/api/Review?id=Doll&rows=5&category=Toys
 
 A végpont GET request esetén visszaadja a kívánt termékhez tartozó véleményeket, ha biztosítjuk a megfelelő paramétereket.
